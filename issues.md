@@ -20,7 +20,7 @@ This project will leverage Clarity 4 features for enhanced security and function
 
 ### Core Contract Implementation
 
-- [ ] **Issue #1**: Implement `initialize` function
+- [x] **Issue #1**: Implement `initialize` function
   - Verify contract owner using `tx-sender` equals `CONTRACT_OWNER`
   - Check initialization status (must be false)
   - Validate signers list length (max 100 using `MAX_SIGNERS`)
