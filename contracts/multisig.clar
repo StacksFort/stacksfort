@@ -35,3 +35,17 @@
 (define-data-var threshold uint u0)
 (define-data-var txn-id uint u0)
 
+;; ============================================
+;; Maps
+;; ============================================
+(define-map transactions
+  uint
+  {
+    type: uint,
+    amount: uint,
+    recipient: principal,
+    token: (optional principal),
+    executed: bool
+  }
+)
+
