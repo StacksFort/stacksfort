@@ -10,10 +10,9 @@ contract_id = 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standa
 
 [contracts.multisig]
 path = 'contracts/multisig.clar'
-clarity_version = 3
-# Note: Set to 3 for local testing (Clarinet limitation)
-# For mainnet deployment: Manually edit deployment plan to use clarity-version: 4
-# Clarity 4 code will work on mainnet even if local tools don't fully support it
+clarity_version = 4
+# Using Clarity 4 for mainnet deployment
+# Note: Clarinet 3.6.1 may show errors, but contracts will work on mainnet/testnet
 epoch = 'latest'
 
 [repl.analysis]
