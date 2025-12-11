@@ -27,3 +27,11 @@
 (define-constant ERR_INVALID_SIGNATURE (err u12))
 (define-constant ERR_INVALID_TOKEN (err u13))
 
+;; ============================================
+;; Data Variables
+;; ============================================
+(define-data-var initialized bool false)
+(define-data-var signers (list 100 principal) (list))
+(define-data-var threshold uint u0)
+(define-data-var txn-id uint u0)
+
