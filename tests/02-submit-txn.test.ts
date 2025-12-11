@@ -9,31 +9,15 @@ const wallet2 = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
 
 // Helper function to initialize contract state for testing
-// This simulates the initialize function until Issue #1 is implemented
+// Note: This assumes the initialize function from Issue #1 is implemented
 function initializeContract(signers: string[], threshold: number) {
-  // Set signers list
-  simnet.callPublicFn(
+  const result = simnet.callPublicFn(
     "multisig",
-    "var-set",
-    [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-    deployer
+    "initialize",
+    [Cl.list(signers.map((s) => Cl.principal(s))), Cl.uint(threshold)],
+    "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM" // CONTRACT_OWNER
   );
-  
-  // Set threshold
-  simnet.callPublicFn(
-    "multisig",
-    "var-set",
-    [Cl.string("threshold"), Cl.uint(threshold)],
-    deployer
-  );
-  
-  // Mark as initialized
-  simnet.callPublicFn(
-    "multisig",
-    "var-set",
-    [Cl.string("initialized"), Cl.bool(true)],
-    deployer
-  );
+  return result;
 }
 
 describe("Issue #2: submit-txn function", () => {
@@ -48,27 +32,7 @@ describe("Issue #2: submit-txn function", () => {
       // Setup: Initialize contract with signers
       const signers = [wallet1, wallet2, wallet3];
       const threshold = 2;
-      
-      // Manually set up contract state for testing
-      // TODO: Replace with initialize() call once Issue #1 is implemented
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(threshold)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, threshold);
 
       // Submit STX transaction (type 0)
       const amount = Cl.uint(1000000); // 1 STX in micro-STX
@@ -132,25 +96,7 @@ describe("Issue #2: submit-txn function", () => {
       // Setup: Initialize contract with signers (wallet1, wallet2, wallet3)
       const signers = [wallet1, wallet2, wallet3];
       const threshold = 2;
-      
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(threshold)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, threshold);
 
       // Try to submit transaction from deployer (not a signer)
       const amount = Cl.uint(1000000);
@@ -188,24 +134,7 @@ describe("Issue #2: submit-txn function", () => {
     beforeEach(() => {
       // Setup: Initialize contract before each test
       const signers = [wallet1, wallet2];
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(2)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, 2);
     });
 
     it("should accept transaction type 0 (STX transfer)", () => {
@@ -247,24 +176,7 @@ describe("Issue #2: submit-txn function", () => {
     beforeEach(() => {
       // Setup: Initialize contract
       const signers = [wallet1, wallet2];
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(2)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, 2);
     });
 
     it("should accept amount greater than 0", () => {
@@ -294,24 +206,7 @@ describe("Issue #2: submit-txn function", () => {
     beforeEach(() => {
       // Setup: Initialize contract
       const signers = [wallet1, wallet2];
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(2)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, 2);
     });
 
     it("should require token contract for type 1 (SIP-010) transactions", () => {
@@ -343,24 +238,7 @@ describe("Issue #2: submit-txn function", () => {
     beforeEach(() => {
       // Setup: Initialize contract
       const signers = [wallet1, wallet2];
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(2)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, 2);
     });
 
     it("should start transaction ID at 0", () => {
@@ -408,24 +286,7 @@ describe("Issue #2: submit-txn function", () => {
     beforeEach(() => {
       // Setup: Initialize contract
       const signers = [wallet1, wallet2];
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("signers"), Cl.list(signers.map((s) => Cl.principal(s)))],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("threshold"), Cl.uint(2)],
-        deployer
-      );
-      simnet.callPublicFn(
-        "multisig",
-        "var-set",
-        [Cl.string("initialized"), Cl.bool(true)],
-        deployer
-      );
+      initializeContract(signers, 2);
     });
 
     it("should store transaction in transactions map", () => {
