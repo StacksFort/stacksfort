@@ -72,7 +72,6 @@
     (signers-list (list 100 principal))
     (threshold-value uint)
 )
-    (response uint uint)
     (begin
         ;; Verify contract owner
         (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_OWNER_ONLY)
@@ -101,7 +100,6 @@
     (recipient principal)
     (token (optional principal))
 )
-    (response uint uint)
     (begin
         ;; Verify contract is initialized
         (asserts! (var-get initialized) ERR_NOT_INITIALIZED)
