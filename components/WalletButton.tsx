@@ -3,15 +3,21 @@
 import { useMemo } from "react";
 import { useStacksWallet } from "@/hooks/useStacksWallet";
 
+type WalletState = ReturnType<typeof useStacksWallet>;
+
 const formatAddress = (address: string | null) => {
   if (!address) return "Connect Wallet";
   if (address.length <= 10) return address;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 };
 
-export function WalletButton() {
-  const { address, connect, disconnect, isReady, isSignedIn } =
-    useStacksWallet();
+type Props = {
+  wallet?: WalletState;
+};
+
+export function WalletButton({ wallet }: Props) {
+  const walletState = wallet ?? useStacksWallet();
+  const { address, connect, disconnect, isReady, isSignedIn } = walletState;
 
   const label = useMemo(
     () => formatAddress(address),
