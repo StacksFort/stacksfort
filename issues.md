@@ -29,7 +29,7 @@ This project will leverage Clarity 4 features for enhanced security and function
   - Mark contract as initialized (set `initialized` to true)
   - Return `(ok true)`
 
-- [ ] **Issue #2**: Implement `submit-txn` function
+- [x] **Issue #2**: Implement `submit-txn` function
   - Get current `txn-id` from storage
   - Verify contract is initialized (must be true)
   - Verify caller is a signer using `index-of` on signers list
@@ -124,7 +124,7 @@ This project will leverage Clarity 4 features for enhanced security and function
   - Verify threshold is stored correctly
   - Verify initialized flag is set to true
 
-- [ ] **Issue #9**: Write transaction submission tests
+- [x] **Issue #9**: Write transaction submission tests
   - Test any signer can submit STX transaction (type 0)
   - Test any signer can submit SIP-010 transaction (type 1)
   - Test non-signer cannot submit transactions
