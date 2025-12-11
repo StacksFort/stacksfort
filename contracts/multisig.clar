@@ -73,6 +73,27 @@
     (threshold-value uint)
 )
     (response bool uint)
+    (begin
+        ;; Verify contract owner
+        (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_OWNER_ONLY)
+        ;; Check initialization status (must be false)
+        (asserts! (not (var-get initialized)) ERR_ALREADY_INITIALIZED)
+        ;; Validate signers list length (max 100 using MAX_SIGNERS)
+        (let ((signers-count (len signers-list)))
+            (asserts! (<= signers-count MAX_SIGNERS) ERR_TOO_MANY_SIGNERS)
+            ;; Validate threshold (min 1 using MIN_SIGNATURES_REQUIRED, max should be <= signers count)
+            (asserts! (>= threshold-value MIN_SIGNATURES_REQUIRED) ERR_INVALID_THRESHOLD)
+            (asserts! (<= threshold-value signers-count) ERR_INVALID_THRESHOLD)
+            ;; Set signers and threshold in storage
+            (var-set signers signers-list)
+            (var-set threshold threshold-value)
+            ;; Mark contract as initialized (set initialized to true)
+            (var-set initialized true)
+            (ok true)
+        )
+        )
+        )
+    )
 )
 
 ;; Issue #2: Submit a new transaction proposal
