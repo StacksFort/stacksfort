@@ -11,6 +11,10 @@ import {
   executeStxTransfer,
   getStxBalance,
   fundMultisigWithStx,
+  executeTokenTransfer,
+  submitTokenTxn,
+  mintMockToken,
+  getTokenBalance,
 } from "./helpers/signing";
 
 // Get test accounts from simnet
@@ -399,5 +403,94 @@ describe("Issue #11: STX Transfer Execution Tests", () => {
      
      const executeResult = executeStxTransfer(0, [sig1, sig2], signer1.address);
      expect(executeResult.result).toBeErr(Cl.uint(14)); // ERR_STX_TRANSFER_FAILED
+  });
+});
+
+describe("Issue #12: SIP-010 Transfer Execution Tests", () => {
+  const signer1 = makeRandomSigner();
+  const signer2 = makeRandomSigner();
+  const tokenContract = "mock-token";
+
+  beforeEach(() => {
+    initMultisigWithSigners([signer1.address, signer2.address], 2);
+    // Mint 10,000 mock tokens to the multisig contract
+    const contractPrincipal = `${deployer}.multisig`;
+    mintMockToken(tokenContract, contractPrincipal, 10000);
+  });
+
+  it("should execute SIP-010 transfer with sufficient signatures", () => {
+    const amount = 1000;
+    // 1. Submit transaction (Type 1)
+    submitTokenTxn(signer1.address, tokenContract, amount);
+    
+    // 2. Get hash
+    const result = getTxnHash(0, signer1.address);
+    const hashHex = bufferHexFromOk(result);
+    
+    // 3. Sign off-chain
+    const sig1 = signHash(hashHex, signer1.privateKey);
+    const sig2 = signHash(hashHex, signer2.privateKey);
+    
+    // 4. Verify initial balance
+    const contractPrincipal = `${deployer}.multisig`;
+    const initialBalance = getTokenBalance(tokenContract, contractPrincipal);
+    expect(initialBalance.result).toBeOk(Cl.uint(10000));
+    
+    // 5. Execute
+    const executeResult = executeTokenTransfer(0, [sig1, sig2], tokenContract, signer1.address);
+    expect(executeResult.result).toBeOk(Cl.bool(true));
+    
+    // 6. Verify executed flag
+    const txnResult = simnet.getMapEntry("multisig", "transactions", Cl.uint(0));
+    expect(txnResult).toBeSome(
+      Cl.tuple({
+        type: Cl.uint(1), // Type 1 for token
+        amount: Cl.uint(amount),
+        recipient: Cl.principal(signer1.address),
+        token: Cl.some(Cl.contractPrincipal(deployer, tokenContract)),
+        executed: Cl.bool(true),
+      })
+    );
+    
+    // 7. Verify balances updated
+    const finalBalance = getTokenBalance(tokenContract, contractPrincipal);
+    expect(finalBalance.result).toBeOk(Cl.uint(9000)); // 10000 - 1000
+    
+    const recipientBalance = getTokenBalance(tokenContract, signer1.address);
+    expect(recipientBalance.result).toBeOk(Cl.uint(amount));
+  });
+
+  it("should fail execution with insufficient signatures", () => {
+    submitTokenTxn(signer1.address, tokenContract, 1000);
+    const hashHex = bufferHexFromOk(getTxnHash(0, signer1.address));
+    const sig1 = signHash(hashHex, signer1.privateKey);
+    
+    const executeResult = executeTokenTransfer(0, [sig1], tokenContract, signer1.address);
+    expect(executeResult.result).toBeErr(Cl.uint(11)); // ERR_INSUFFICIENT_SIGNATURES
+  });
+
+  it("should fail execution with wrong token contract", () => {
+    submitTokenTxn(signer1.address, tokenContract, 1000);
+    const hashHex = bufferHexFromOk(getTxnHash(0, signer1.address));
+    const sig1 = signHash(hashHex, signer1.privateKey);
+    const sig2 = signHash(hashHex, signer2.privateKey);
+    
+    // Try to execute with a different token contract (e.g. self)
+    // Here we just pass "multisig" as if it were a token checking logic
+    // The contract checks (contract-of token-contract) vs stored token
+    // Stored: mock-token. Passed: multisig (or any random)
+    
+    const executeResult = executeTokenTransfer(0, [sig1, sig2], "multisig", signer1.address);
+    expect(executeResult.result).toBeErr(Cl.uint(13)); // ERR_INVALID_TOKEN
+  });
+
+  it("should fail execution if transaction type is not SIP-010 (1)", () => {
+    submitStxTxn(signer1.address, 1000); // Type 0
+    const hashHex = bufferHexFromOk(getTxnHash(0, signer1.address));
+    const sig1 = signHash(hashHex, signer1.privateKey);
+    const sig2 = signHash(hashHex, signer2.privateKey);
+    
+    const executeResult = executeTokenTransfer(0, [sig1, sig2], tokenContract, signer1.address);
+    expect(executeResult.result).toBeErr(Cl.uint(8)); // ERR_INVALID_TXN_TYPE
   });
 });
