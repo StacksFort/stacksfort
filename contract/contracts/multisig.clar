@@ -6,7 +6,7 @@
 ;;   - restrict-assets? (Issue #7) - Post-conditions for token transfers
 ;;   - stacks-block-time (Issue #15) - Transaction expiration
 ;;   - contract-hash? (Issue #7) - Token contract verification
-   ;;   - to-ascii? (Issues #2, #6, #7) - Enhanced logging
+;;   - to-ascii? (Issues #2, #6, #7) - Enhanced logging
 
 ;; SIP-010 trait import for token transfers
 (use-trait sip-010-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
@@ -43,6 +43,7 @@
 (define-constant CONTRACT_OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 (define-constant MAX_SIGNERS u100)
 (define-constant MIN_SIGNATURES_REQUIRED u1)
+(define-constant DEFAULT_EXPIRATION_WINDOW u604800) ;; 7 days in seconds
 
 ;; ============================================
 ;; Error Constants
@@ -61,6 +62,8 @@
 (define-constant ERR_INVALID_SIGNATURE (err u12))
 (define-constant ERR_INVALID_TOKEN (err u13))
 (define-constant ERR_STX_TRANSFER_FAILED (err u14))
+(define-constant ERR_REENTRANCY_DETECTED (err u15))
+(define-constant ERR_TXN_EXPIRED (err u16))
 
 ;; ============================================
 ;; Data Variables
@@ -69,6 +72,7 @@
 (define-data-var signers (list 100 principal) (list))
 (define-data-var threshold uint u0)
 (define-data-var txn-id uint u0)
+(define-data-var reentrancy-lock bool false)
 
 ;; ============================================
 ;; Maps
@@ -80,7 +84,8 @@
     amount: uint,
     recipient: principal,
     token: (optional principal),
-    executed: bool
+    executed: bool,
+    expiration: uint
   }
 )
 
@@ -129,11 +134,13 @@
 )
 
 ;; Issue #2: Submit a new transaction proposal
+;; Issue #15: Added optional expiration parameter
 (define-public (submit-txn
     (txn-type uint)
     (amount uint)
     (recipient principal)
     (token (optional principal))
+    (expiration (optional uint))
 )
     (begin
         ;; Verify contract is initialized
@@ -151,19 +158,23 @@
                 true
             )
             ;; Get current txn-id from storage
-            (let ((current-id (var-get txn-id)))
+            (let (
+                (current-id (var-get txn-id))
+                (expiry-time (default-to (+ stacks-block-time DEFAULT_EXPIRATION_WINDOW) expiration))
+            )
                 ;; Store transaction in transactions map
                 (map-set transactions current-id {
                     type: txn-type,
                     amount: amount,
                     recipient: recipient,
                     token: token,
-                    executed: false
+                    executed: false,
+                    expiration: expiry-time
                 })
                 ;; Increment txn-id by 1
                 (var-set txn-id (+ current-id u1))
                 ;; Print transaction details for logging
-                (print {txn-id: current-id, type: txn-type, amount: amount, recipient: recipient, token: token})
+                (print {txn-id: current-id, type: txn-type, amount: amount, recipient: recipient, token: token, expiration: expiry-time})
                 (ok current-id)
             )
         )
@@ -249,6 +260,10 @@
         ;; Verify contract is initialized
         (asserts! (var-get initialized) ERR_NOT_INITIALIZED)
 
+        ;; Reentrancy Check
+        (asserts! (not (var-get reentrancy-lock)) ERR_REENTRANCY_DETECTED)
+        (var-set reentrancy-lock true)
+
         ;; Verify caller is a signer
         (asserts! (is-some (index-of (var-get signers) tx-sender)) ERR_NOT_SIGNER)
 
@@ -264,6 +279,9 @@
 
             ;; Verify transaction hasn't been executed
             (asserts! (not (get executed txn)) ERR_TXN_ALREADY_EXECUTED)
+
+            ;; Verify transaction has not expired
+            (asserts! (< stacks-block-time (get expiration txn)) ERR_TXN_EXPIRED)
 
             ;; Verify signatures list length >= threshold
             (asserts! (>= (len signatures) (var-get threshold)) ERR_INSUFFICIENT_SIGNATURES)
@@ -294,7 +312,8 @@
                                     amount: (get amount txn),
                                     recipient: (get recipient txn),
                                     token: (get token txn),
-                                    executed: true
+                                    executed: true,
+                                    expiration: (get expiration txn)
                                 })
                                 ;; Log execution details
                                 (print {
@@ -305,9 +324,14 @@
                                     signatures: (len signatures),
                                     valid-signatures: valid-count
                                 })
+                                (var-set reentrancy-lock false)
                                 (ok true)
                             )
-                        err-value ERR_STX_TRANSFER_FAILED
+                        err-value 
+                            (begin
+                                (var-set reentrancy-lock false)
+                                ERR_STX_TRANSFER_FAILED
+                            )
                     )
                 )
             )
@@ -324,6 +348,10 @@
     (begin
         ;; Verify contract is initialized
         (asserts! (var-get initialized) ERR_NOT_INITIALIZED)
+
+        ;; Reentrancy Check
+        (asserts! (not (var-get reentrancy-lock)) ERR_REENTRANCY_DETECTED)
+        (var-set reentrancy-lock true)
 
         ;; Verify caller is a signer
         (asserts! (is-some (index-of (var-get signers) tx-sender)) ERR_NOT_SIGNER)
@@ -348,6 +376,9 @@
 
             ;; Verify transaction hasn't been executed
             (asserts! (not (get executed txn)) ERR_TXN_ALREADY_EXECUTED)
+
+            ;; Verify transaction has not expired
+            (asserts! (< stacks-block-time (get expiration txn)) ERR_TXN_EXPIRED)
 
             ;; Verify signatures list length >= threshold
             (asserts! (>= (len signatures) (var-get threshold)) ERR_INSUFFICIENT_SIGNATURES)
@@ -383,7 +414,8 @@
                                     amount: (get amount txn),
                                     recipient: (get recipient txn),
                                     token: (get token txn),
-                                    executed: true
+                                    executed: true,
+                                    expiration: (get expiration txn)
                                 })
                                 ;; Log execution details
                                 (print {
@@ -395,9 +427,14 @@
                                     signatures: (len signatures),
                                     valid-signatures: valid-count
                                 })
+                                (var-set reentrancy-lock false)
                                 (ok true)
                             )
-                        err-value ERR_STX_TRANSFER_FAILED
+                        err-value 
+                            (begin
+                                (var-set reentrancy-lock false)
+                                ERR_STX_TRANSFER_FAILED
+                            )
                     )
                 )
             )
