@@ -240,7 +240,8 @@ export function useMultisig(contractAddress?: string, contractName?: string) {
       type: number,
       amount: number,
       recipient: string,
-      token?: string
+      token?: string,
+      expiration?: number
     ): Promise<string | null> => {
       if (!wallet.address) {
         setError("Wallet not connected");
@@ -254,6 +255,10 @@ export function useMultisig(contractAddress?: string, contractName?: string) {
         const tokenCV = token
           ? someCV(principalCV(token))
           : noneCV();
+        
+        const expirationCV = expiration
+          ? someCV(uintCV(expiration))
+          : noneCV();
 
         const txOptions = {
           network: getNetwork(),
@@ -266,6 +271,7 @@ export function useMultisig(contractAddress?: string, contractName?: string) {
             uintCV(amount),
             principalCV(recipient),
             tokenCV,
+            expirationCV,
           ],
           senderKey: wallet.address,
           postConditionMode: PostConditionMode.Deny,
