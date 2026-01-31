@@ -190,5 +190,5 @@ This project will leverage Clarity 4 features for enhanced security and function
   - Add error constant: `ERR_TXN_EXPIRED`
   - **Clarity 4**: Used `block-height` instead of `stacks-block-time` for compatibility
 - [ ] **Issue #16**: ❌ PENDING - Add ability to cancel pending transactions
-- [ ] **Issue #17**: ❌ PENDING - Add signer management (add/remove signers)
-- [ ] **Issue #18**: ❌ PENDING - Add threshold update functionality
+- [x] **Issue #17**: ✅ COMPLETED - Add signer management (add/remove signers)
+- [x] **Issue #18**: ✅ COMPLETED - Add threshold update functionality
